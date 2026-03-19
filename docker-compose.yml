@@ -1,0 +1,59 @@
+services:
+  watersystem-data-pipeline:
+    build:
+      context: .
+    container_name: watersystem-data-pipeline
+    volumes:
+      - .:/app
+    environment:
+        - SERVER_HOST=${SERVER_HOST:-:8080}
+        - NATS_SERVER_URL=${NATS_SERVER_URL:-nats://nats:4222}
+        - INFLUXDB_URL=${INFLUXDB_URL:-http://influxdb:8086}
+        - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-my-super-token}
+        - INFLUXDB_ORG=${INFLUXDB_ORG:-water-system}
+        - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-bonsai-data}
+    depends_on:
+      - nats
+      - influxdb
+
+  nats:
+    image: nats:2-alpine
+    container_name: nats
+    command: ["-js", "--store_dir", "/data", "--http_port", "8222"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats_data:/data
+    restart: unless-stopped
+
+  nats-box:
+    image: synadia/nats-box:latest
+    container_name: nats-box
+    depends_on:
+      - nats
+    stdin_open: true
+    tty: true
+    entrypoint: ["sh", "-lc", "sleep infinity"]
+
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=${DOCKER_INFLUXDB_INIT_MODE:-setup}
+      - DOCKER_INFLUXDB_INIT_USERNAME=${DOCKER_INFLUXDB_INIT_USERNAME:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${DOCKER_INFLUXDB_INIT_PASSWORD:-change-me-please}
+      - DOCKER_INFLUXDB_INIT_ORG=${DOCKER_INFLUXDB_INIT_ORG:-water-system}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${DOCKER_INFLUXDB_INIT_BUCKET:-bonsai-data}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${DOCKER_INFLUXDB_INIT_ADMIN_TOKEN:-my-super-token}
+    volumes:
+      - influxdb2_data:/var/lib/influxdb2
+      - influxdb2_config:/etc/influxdb2
+    restart: unless-stopped
+
+volumes:
+  nats_data:
+  influxdb2_data:
+  influxdb2_config:
