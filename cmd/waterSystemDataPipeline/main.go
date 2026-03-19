@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"os"
 	"time"
-	"waterSystem-data-pipeline/internal/config"
-	httpinfra "waterSystem-data-pipeline/internal/infra/http"
+
+	"github.com/bruli/waterSystem-data-pipeline/internal/config"
+	httpinfra "github.com/bruli/waterSystem-data-pipeline/internal/infra/http"
+	"github.com/bruli/waterSystem-data-pipeline/internal/infra/nats"
 )
 
 func main() {
@@ -29,6 +31,20 @@ func main() {
 	defer func() {
 		_ = serverListener.Close()
 	}()
+
+	consumer, err := nats.NewConsumer(conf.NatsServerURL)
+	if err != nil {
+		slog.ErrorContext(ctx, "Error starting consumer", "err", err.Error())
+		os.Exit(1)
+	}
+	executeLogsConsumer, err := consumer.Create(ctx, "execution.logs")
+	if err != nil {
+		slog.ErrorContext(ctx, "Error starting execution logs consumer", "err", err.Error())
+		os.Exit(1)
+	}
+	executionLogHandler := nats.NewExecutionLogsHandler(log)
+
+	go nats.Consume(ctx, executeLogsConsumer, log, executionLogHandler.Handle)
 
 	srv := httpinfra.NewServer(conf.ServerHost)
 	defer func() {

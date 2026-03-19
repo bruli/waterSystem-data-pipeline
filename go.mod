@@ -1,6 +1,6 @@
-module waterSystem-data-pipeline
+module github.com/bruli/waterSystem-data-pipeline
 
-go 1.26
+go 1.26.1
 
 require (
 	github.com/caarlos0/env/v11 v11.4.0
@@ -13,4 +13,10 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/sys v0.39.0 // indirect
+)
+
+tool (
+	github.com/mfridman/tparse
+	golang.org/x/vuln/cmd/govulncheck
+	mvdan.cc/gofumpt
 )

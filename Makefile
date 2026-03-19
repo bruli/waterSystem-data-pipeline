@@ -86,6 +86,18 @@ test:
 .PHONY: check
 check: fmt security lint test
 
+.PHONY: pub-weather
+pub-weather:
+	@set -euo pipefail; \
+    echo "🚀 Publishing weather events..."; \
+    docker exec nats-box /scripts/publish.sh weather
+
+.PHONY: pub-logs
+pub-logs:
+	@set -euo pipefail; \
+    echo "🚀 Publishing logs events..."; \
+    docker exec nats-box /scripts/publish.sh log
+
 .PHONY: clean
 clean:
 	@set -euo pipefail; \
