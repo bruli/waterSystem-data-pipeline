@@ -32,19 +32,27 @@ func main() {
 		_ = serverListener.Close()
 	}()
 
-	consumer, err := nats.NewConsumer(conf.NatsServerURL)
+	consumer, err := nats.NewConsumer(ctx, conf.NatsServerURL, nats.Subjects)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error starting consumer", "err", err.Error())
 		os.Exit(1)
 	}
-	executeLogsConsumer, err := consumer.Create(ctx, "execution.logs")
+	executionLogsConsumer, err := consumer.Create(ctx, nats.ExecutionLogsSubject)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error starting execution logs consumer", "err", err.Error())
 		os.Exit(1)
 	}
 	executionLogHandler := nats.NewExecutionLogsHandler(log)
 
-	go nats.Consume(ctx, executeLogsConsumer, log, executionLogHandler.Handle)
+	terraceWeatherConsumer, err := consumer.Create(ctx, nats.TerraceWeatherSubject)
+	if err != nil {
+		slog.ErrorContext(ctx, "Error starting terrace weather consumer", "err", err.Error())
+		os.Exit(1)
+	}
+	terraceWeatherHandler := nats.NewTerraceWeatherHandler(log)
+
+	go nats.Consume(ctx, executionLogsConsumer, log, executionLogHandler.Handle)
+	go nats.Consume(ctx, terraceWeatherConsumer, log, terraceWeatherHandler.Handle)
 
 	srv := httpinfra.NewServer(conf.ServerHost)
 	defer func() {

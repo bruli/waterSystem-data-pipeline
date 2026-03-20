@@ -98,6 +98,12 @@ pub-logs:
     echo "🚀 Publishing logs events..."; \
     docker exec nats-box /scripts/publish.sh log
 
+.PHONY: stream-clean
+stream-clean:
+	@set -euo pipefail; \
+    echo "🧹 Cleaning events..."; \
+    docker exec nats-box /scripts/publish.sh clean
+
 .PHONY: clean
 clean:
 	@set -euo pipefail; \
