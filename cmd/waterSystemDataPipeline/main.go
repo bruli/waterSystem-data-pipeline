@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bruli/waterSystem-data-pipeline/internal/config"
+	executedlogs "github.com/bruli/waterSystem-data-pipeline/internal/domain/executed_logs"
 	"github.com/bruli/waterSystem-data-pipeline/internal/domain/terrace_weather"
 	httpinfra "github.com/bruli/waterSystem-data-pipeline/internal/infra/http"
 	"github.com/bruli/waterSystem-data-pipeline/internal/infra/influxdb2"
@@ -44,7 +45,10 @@ func main() {
 		slog.ErrorContext(ctx, "Error starting execution logs consumer", "err", err.Error())
 		os.Exit(1)
 	}
-	executionLogHandler := nats.NewExecutionLogsHandler(log)
+	execLogRepo := influxdb2.NewExecutedLogsRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket)
+	defer execLogRepo.Close()
+	elCreate := executedlogs.NewCreate(execLogRepo)
+	executionLogHandler := nats.NewExecutionLogsHandler(log, elCreate)
 
 	terraceWeatherConsumer, err := consumer.Create(ctx, nats.TerraceWeatherSubject)
 	if err != nil {
