@@ -21,10 +21,9 @@ func (e *ExecutedLogsRepository) Save(ctx context.Context, executedLog *executed
 	point := write.NewPoint(
 		"logs",
 		map[string]string{
-			"location": "terrace",
+			"zone": executedLog.Zone(),
 		},
 		map[string]interface{}{
-			"zone":    executedLog.Zone(),
 			"seconds": executedLog.Seconds(),
 		},
 		executedLog.ExecutedAt(),
