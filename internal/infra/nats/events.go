@@ -9,7 +9,7 @@ type TerraceWeather struct {
 }
 
 type ExecutionLog struct {
-	Zone       string    `json:"zone"`
+	Zone       string    `json:"zone_name"`
 	Seconds    int       `json:"seconds"`
 	ExecutedAt time.Time `json:"executed_at"`
 }
