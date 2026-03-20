@@ -9,7 +9,7 @@ import (
 	"github.com/nats-io/nats.go/jetstream"
 )
 
-const StreamName = "EVENTS"
+const StreamName = "WATER_SYSTEM"
 
 type Consumer struct {
 	js jetstream.JetStream
