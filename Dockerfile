@@ -1,9 +1,31 @@
-FROM golang:1.26.1
+# syntax=docker/dockerfile:1.20
 
-RUN mkdir /app
-WORKDIR /app
+############################
+# Etapa de build ARM64
+############################
+FROM --platform=$BUILDPLATFORM golang:1.26.1 AS builder
+WORKDIR /src
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y make git
+ENV GOPROXY=https://proxy.golang.org,direct
 
-RUN go install -v github.com/cespare/reflex@latest
-ENTRYPOINT ["reflex", "-c", "./reflex.conf"]
+# 1) Deps (capa estable + cache)
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+# 2) Codi
+COPY . .
+
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /out/waterSystemDataPipeline ./cmd/waterSystemDataPipeline
+# --- runtime ---
+FROM alpine:3.22
+
+RUN apk add --no-cache tzdata
+# copia el teu binari
+COPY --from=builder /out/waterSystemDataPipeline /usr/local/bin/waterSystemDataPipeline
+
+ENTRYPOINT ["/usr/local/bin/waterSystemDataPipeline"]
