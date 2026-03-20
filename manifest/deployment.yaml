@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    namespace: watersystem-data-pipeline
+    labels:
+        app: watersystem-data-pipeline
+    name: watersystem-data-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: watersystem-data-pipeline
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: watersystem-data-pipeline
+    spec:
+      containers:
+      - image: ghcr.io/bruli/watersystem-data-pipeline:0.1.0
+        name: watersystem-data-pipeline
+        imagePullPolicy: IfNotPresent
+        ports:
+            - name: http
+              containerPort: 8080
+        env:
+            - name: SERVER_HOST
+              value: :8080
+            - name: NATS_SERVER_URL
+              value: nats://nats.nats.svc.cluster.local:4222
+            - name: INFLUXDB_URL
+              value: http://influxdb-influxdb2.influxdb.svc.cluster.local:80
+            - name: INFLUXDB_TOKEN
+              valueFrom:
+                  secretKeyRef:
+                      name: watersystem-data-pipeline-secret
+                      key: INFLUXDB_TOKEN
+            - name: INFLUXDB_ORG
+              valueFrom:
+                  secretKeyRef:
+                      name: watersystem-data-pipeline-secret
+                      key: INFLUXDB_ORG
+            - name: INFLUXDB_BUCKET
+              valueFrom:
+                  secretKeyRef:
+                      name: watersystem-data-pipeline-secret
+                      key: INFLUXDB_BUCKET
+        readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+        livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 5
+            periodSeconds: 20
+        resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 200m, memory: 128Mi }
