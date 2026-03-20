@@ -16,6 +16,9 @@ spec:
       labels:
         app: watersystem-data-pipeline
     spec:
+      serviceAccountName: default
+      imagePullSecrets:
+        - name: ghcr-login
       containers:
         - image: ghcr.io/bruli/watersystem-data-pipeline:0.1.2
           name: watersystem-data-pipeline
