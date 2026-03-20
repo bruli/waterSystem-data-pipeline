@@ -10,7 +10,9 @@ import (
 	"time"
 
 	"github.com/bruli/waterSystem-data-pipeline/internal/config"
+	"github.com/bruli/waterSystem-data-pipeline/internal/domain/terrace_weather"
 	httpinfra "github.com/bruli/waterSystem-data-pipeline/internal/infra/http"
+	"github.com/bruli/waterSystem-data-pipeline/internal/infra/influxdb2"
 	"github.com/bruli/waterSystem-data-pipeline/internal/infra/nats"
 )
 
@@ -49,7 +51,10 @@ func main() {
 		slog.ErrorContext(ctx, "Error starting terrace weather consumer", "err", err.Error())
 		os.Exit(1)
 	}
-	terraceWeatherHandler := nats.NewTerraceWeatherHandler(log)
+	twRepo := influxdb2.NewTerraceWeatherRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket)
+	defer twRepo.Close()
+	twCreate := terrace_weather.NewCreate(twRepo)
+	terraceWeatherHandler := nats.NewTerraceWeatherHandler(log, twCreate)
 
 	go nats.Consume(ctx, executionLogsConsumer, log, executionLogHandler.Handle)
 	go nats.Consume(ctx, terraceWeatherConsumer, log, terraceWeatherHandler.Handle)
