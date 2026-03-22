@@ -1,0 +1,54 @@
+package forecast
+
+import "time"
+
+type Weather struct {
+	hour                     time.Time
+	temperature              float64
+	relativeHumidity         int
+	precipitationProbability float64
+	cloudCover               int
+	shortwaveRadiation       float64
+}
+
+func (w Weather) Hour() time.Time {
+	return w.hour
+}
+
+func (w Weather) Temperature() float64 {
+	return w.temperature
+}
+
+func (w Weather) RelativeHumidity() int {
+	return w.relativeHumidity
+}
+
+func (w Weather) PrecipitationProbability() float64 {
+	return w.precipitationProbability
+}
+
+func (w Weather) CloudCover() int {
+	return w.cloudCover
+}
+
+func (w Weather) ShortwaveRadiation() float64 {
+	return w.shortwaveRadiation
+}
+
+func NewWeather(
+	hour time.Time,
+	temperature float64,
+	relativeHumidity int,
+	precipitationProbability float64,
+	cloudCover int,
+	shortwaveRadiation float64,
+) *Weather {
+	return &Weather{
+		hour:                     hour,
+		temperature:              temperature,
+		relativeHumidity:         relativeHumidity,
+		precipitationProbability: precipitationProbability,
+		cloudCover:               cloudCover,
+		shortwaveRadiation:       shortwaveRadiation,
+	}
+}

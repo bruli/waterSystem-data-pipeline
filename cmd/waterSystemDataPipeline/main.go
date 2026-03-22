@@ -11,10 +11,13 @@ import (
 
 	"github.com/bruli/waterSystem-data-pipeline/internal/config"
 	executedlogs "github.com/bruli/waterSystem-data-pipeline/internal/domain/executed_logs"
+	"github.com/bruli/waterSystem-data-pipeline/internal/domain/forecast"
 	"github.com/bruli/waterSystem-data-pipeline/internal/domain/terrace_weather"
+	apiinfra "github.com/bruli/waterSystem-data-pipeline/internal/infra/api"
 	httpinfra "github.com/bruli/waterSystem-data-pipeline/internal/infra/http"
 	"github.com/bruli/waterSystem-data-pipeline/internal/infra/influxdb2"
 	"github.com/bruli/waterSystem-data-pipeline/internal/infra/nats"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -34,6 +37,16 @@ func main() {
 	defer func() {
 		_ = serverListener.Close()
 	}()
+
+	forecastPred := buildForecastPrediction(conf, log)
+
+	cron, err := buildCron()
+	if err != nil {
+		log.ErrorContext(ctx, "Error creating cron", "err", err)
+		os.Exit(1)
+	}
+
+	go forecastCron(ctx, cron, forecastPred, log)
 
 	consumer, err := nats.NewConsumer(ctx, conf.NatsServerURL, nats.Subjects)
 	if err != nil {
@@ -72,6 +85,34 @@ func main() {
 	runHTTPServer(ctx, srv, log, serverListener)
 }
 
+func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, log *slog.Logger) {
+	defer c.Stop()
+	_, err := c.AddFunc("* 7 * * *", func() {
+		if err := pred.Get(ctx, forecast.Tomorrow()); err != nil {
+			log.ErrorContext(ctx, "Error getting forecast", "err", err)
+		}
+		log.InfoContext(ctx, "Forecast prediction finished")
+	})
+	if err != nil {
+		log.ErrorContext(ctx, "Error adding cron job", "err", err)
+		os.Exit(1)
+	}
+	log.InfoContext(ctx, "Forecast cron prediction started")
+	c.Start()
+	select {
+	case <-ctx.Done():
+		log.InfoContext(ctx, "Forecast cron prediction stopped")
+		return
+	}
+
+}
+
+func buildForecastPrediction(conf *config.Config, log *slog.Logger) *forecast.Prediction {
+	foreCastWeathRepo := influxdb2.NewForecastWeatherRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket)
+	opMetReader := apiinfra.NewOpenMeteoReader()
+	return forecast.NewPrediction(opMetReader, foreCastWeathRepo, log)
+}
+
 func buildLog() *slog.Logger {
 	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
@@ -99,4 +140,13 @@ func shutdown(ctx context.Context, srv *http.Server, log *slog.Logger) {
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Error("error shutting down server", "err", err)
 	}
+}
+
+func buildCron() (*cron.Cron, error) {
+	loc, err := time.LoadLocation("Europe/Madrid")
+	if err != nil {
+		return nil, err
+	}
+	c := cron.New(cron.WithLocation(loc))
+	return c, nil
 }
