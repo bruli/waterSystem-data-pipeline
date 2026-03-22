@@ -7,9 +7,11 @@ A lightweight data pipeline for collecting, processing, and storing events gener
 The **WaterSystem Data Pipeline** is responsible for:
 
 - Consuming events from **NATS (JetStream)**
-- Processing different event types:
-    - `terrace_weather`
-    - `execution_logs`
+- Fetching external weather forecast data from **Open-Meteo**
+- Processing different data sources:
+  - `terrace_weather`
+  - `execution_logs`
+  - `forecast` (daily weather prediction)
 - Persisting structured data into **InfluxDB**
 - Acting as the bridge between real-time event streaming and time-series storage
 
@@ -19,30 +21,64 @@ This enables monitoring, analytics, and visualization (e.g., Grafana, Home Assis
 
 ## Architecture
 
-[Raspberry / Sensors]
-↓
-NATS
-↓
-WaterSystem Data Pipeline
-↓
-InfluxDB
-↓
+[Raspberry / Sensors]  
+↓  
+NATS  
+↓  
+WaterSystem Data Pipeline  
+↓  
+InfluxDB  
+↓  
 Grafana / HA
 
+(+ external forecast ingestion)
+
+[Open-Meteo API]  
+↓  
+WaterSystem Data Pipeline  
+↓  
+InfluxDB
 
 ---
 
-## Event Types
+## Data Sources
 
-### 🌦 Terrace Weather
+### 📡 Event-based (via NATS)
+
+#### 🌦 Terrace Weather
 - Temperature
 - Rain status
 - Timestamp
 
-### ⏱ Execution Logs
+#### ⏱ Execution Logs
 - Irrigation duration (seconds)
 - Zone name
 - Execution timestamp
+
+---
+
+### 🌍 Forecast (Open-Meteo)
+
+The pipeline performs a **daily request** to Open-Meteo and stores **hourly predictions for the next day**.
+
+#### Stored fields (per hour):
+- `temperature_2m`
+- `relative_humidity_2m`
+- `precipitation`
+- `cloudcover`
+- `shortwave_radiation`
+
+#### Characteristics:
+- 1 request per day
+- 24 data points (hourly)
+- Timestamp corresponds to **forecasted time**, not ingestion time
+
+#### Measurement:
+- `forecast`
+
+#### Tags:
+- `location=terrace`
+- *(optional)* `forecast_generated_at`
 
 ---
 
@@ -72,18 +108,3 @@ INFLUXDB_URL=http://influxdb:80
 INFLUXDB_TOKEN=my-super-token
 INFLUXDB_ORG=home
 INFLUXDB_BUCKET=bonsai-data
-```
-
----
-
-## Event Types
-
-### 🌦 Terrace Weather
-- Temperature
-- Rain status
-- Timestamp
-
-### ⏱ Execution Logs
-- Irrigation duration (seconds)
-- Zone name
-- Execution timestamp
