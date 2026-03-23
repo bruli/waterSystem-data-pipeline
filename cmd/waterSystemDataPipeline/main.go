@@ -20,7 +20,7 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-const serviceName = "waterSystem-data -pipeline"
+const serviceName = "waterSystem-data-pipeline"
 
 func main() {
 	ctx := context.Background()
