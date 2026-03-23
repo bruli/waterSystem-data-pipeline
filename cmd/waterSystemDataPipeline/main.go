@@ -20,6 +20,8 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+const serviceName = "waterSystem-data -pipeline"
+
 func main() {
 	ctx := context.Background()
 	log := buildLog()
@@ -114,11 +116,13 @@ func buildForecastPrediction(conf *config.Config, log *slog.Logger) *forecast.Pr
 }
 
 func buildLog() *slog.Logger {
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	})
 
-	return slog.New(handler)
+	log := slog.New(handler)
+	log.With("service", serviceName)
+	return log
 }
 
 func runHTTPServer(ctx context.Context, srv *http.Server, log *slog.Logger, serverListener net.Listener) {
