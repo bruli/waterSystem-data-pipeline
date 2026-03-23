@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/bruli/waterSystem-data-pipeline/internal/domain/forecast"
-	"github.com/bruli/waterSystem-data-pipeline/internal/infra/api"
+	apiinfra "github.com/bruli/waterSystem-data-pipeline/internal/infra/api"
 	"github.com/stretchr/testify/require"
 )
 

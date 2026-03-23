@@ -2,8 +2,6 @@ package forecast
 
 import "time"
 
-const timeLocation = "Europe/Madrid"
-
 type Slot struct {
 	from, to time.Time
 }

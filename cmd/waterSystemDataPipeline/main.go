@@ -101,11 +101,8 @@ func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, 
 	}
 	log.InfoContext(ctx, "Forecast cron prediction started")
 	c.Start()
-	select {
-	case <-ctx.Done():
-		log.InfoContext(ctx, "Forecast cron prediction stopped")
-		return
-	}
+	<-ctx.Done()
+	log.InfoContext(ctx, "Forecast cron prediction stopped")
 
 }
 
