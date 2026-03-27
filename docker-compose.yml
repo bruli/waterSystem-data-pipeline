@@ -13,9 +13,13 @@ services:
         - INFLUXDB_TOKEN=${INFLUXDB_TOKEN:-my-super-token}
         - INFLUXDB_ORG=${INFLUXDB_ORG:-water-system}
         - INFLUXDB_BUCKET=${INFLUXDB_BUCKET:-bonsai-data}
+        - OTEL_EXPORTER_OTLP_ENDPOINT=http://lgtm:4318
+        - OTEL_TRACES_SAMPLER=always_on
+        - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
     depends_on:
       - nats
       - influxdb
+      - lgtm
 
   nats:
     image: nats:2-alpine
@@ -55,6 +59,14 @@ services:
       - influxdb2_data:/var/lib/influxdb2
       - influxdb2_config:/etc/influxdb2
     restart: unless-stopped
+
+  lgtm:
+      image: grafana/otel-lgtm:latest
+      ports:
+        - "3002:3000"
+        - "4317:4317"
+        - "4318:4318"
+
 
 volumes:
   nats_data:

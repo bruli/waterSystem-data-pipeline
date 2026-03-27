@@ -11,16 +11,18 @@ TEMP=$(awk -v min=15 -v max=35 -v seed="$SEED" 'BEGIN{srand(seed); printf "%.2f"
 SECONDS_VAL=$(awk -v min=5 -v max=60 -v seed="$((SEED+1))" 'BEGIN{srand(seed); print int(min+rand()*(max-min+1))}')
 RAIN_FLAG=$(awk -v seed="$((SEED+2))" 'BEGIN{srand(seed); if (rand() < 0.2) print "true"; else print "false"}')
 
+TRACEPARENT=$(generate_traceparent)
+
 case "$TYPE" in
   weather)
     PAYLOAD="{\"temperature\": $TEMP, \"is_raining\": $RAIN_FLAG, \"executed_at\": \"$NOW\"}"
     echo "$PAYLOAD"
-    nats --server "$SERVER" pub "terrace_weather" "$PAYLOAD"
+    nats --server "$SERVER" pub -H "traceparent: $TRACEPARENT" "terrace_weather" "$PAYLOAD"
     ;;
   log)
     PAYLOAD="{\"seconds\": $SECONDS_VAL, \"zone\": \"zone_testing\", \"executed_at\": \"$NOW\"}"
     echo "$PAYLOAD"
-    nats --server "$SERVER" pub "execution_logs" "$PAYLOAD"
+    nats --server "$SERVER" pub -H "traceparent: $TRACEPARENT" "execution_logs" "$PAYLOAD"
     ;;
   clean)
     echo "Cleaning stream $STREAM_NAME..."
@@ -35,3 +37,9 @@ case "$TYPE" in
     exit 1
     ;;
 esac
+
+generate_traceparent() {
+  TRACE_ID=$(hexdump -n 16 -e '4/4 "%08x"' /dev/urandom)
+  SPAN_ID=$(hexdump -n 8 -e '2/4 "%08x"' /dev/urandom)
+  echo "00-$TRACE_ID-$SPAN_ID-01"
+}

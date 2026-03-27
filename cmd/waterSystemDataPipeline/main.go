@@ -17,7 +17,9 @@ import (
 	httpinfra "github.com/bruli/waterSystem-data-pipeline/internal/infra/http"
 	"github.com/bruli/waterSystem-data-pipeline/internal/infra/influxdb2"
 	"github.com/bruli/waterSystem-data-pipeline/internal/infra/nats"
+	"github.com/bruli/waterSystem-data-pipeline/internal/infra/tracing"
 	"github.com/robfig/cron/v3"
+	"go.opentelemetry.io/otel"
 )
 
 const serviceName = "waterSystem-data-pipeline"
@@ -30,6 +32,23 @@ func main() {
 		log.ErrorContext(ctx, "error loading config", "error", err)
 		os.Exit(1)
 	}
+
+	tracingProv, err := tracing.InitTracing(ctx, serviceName)
+	if err != nil {
+		log.ErrorContext(ctx, "Error initializing tracing", "err", err)
+		os.Exit(1)
+	}
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		if err = tracingProv.Shutdown(shutdownCtx); err != nil {
+			log.ErrorContext(ctx, "Error shutting down tracing", "err", err)
+		}
+	}()
+
+	tracer := otel.Tracer(serviceName)
+
 	serverListener, err := net.Listen("tcp", conf.ServerHost)
 	log.InfoContext(ctx, "Starting server", "host", conf.ServerHost)
 	if err != nil {
@@ -60,20 +79,20 @@ func main() {
 		slog.ErrorContext(ctx, "Error starting execution logs consumer", "err", err.Error())
 		os.Exit(1)
 	}
-	execLogRepo := influxdb2.NewExecutedLogsRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket)
+	execLogRepo := influxdb2.NewExecutedLogsRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket, tracer)
 	defer execLogRepo.Close()
 	elCreate := executedlogs.NewCreate(execLogRepo)
-	executionLogHandler := nats.NewExecutionLogsHandler(log, elCreate)
+	executionLogHandler := nats.NewExecutionLogsHandler(log, elCreate, tracer)
 
 	terraceWeatherConsumer, err := consumer.Create(ctx, nats.TerraceWeatherSubject)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error starting terrace weather consumer", "err", err.Error())
 		os.Exit(1)
 	}
-	twRepo := influxdb2.NewTerraceWeatherRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket)
+	twRepo := influxdb2.NewTerraceWeatherRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket, tracer)
 	defer twRepo.Close()
 	twCreate := terrace_weather.NewCreate(twRepo)
-	terraceWeatherHandler := nats.NewTerraceWeatherHandler(log, twCreate)
+	terraceWeatherHandler := nats.NewTerraceWeatherHandler(log, twCreate, tracer)
 
 	go nats.Consume(ctx, executionLogsConsumer, log, executionLogHandler.Handle)
 	go nats.Consume(ctx, terraceWeatherConsumer, log, terraceWeatherHandler.Handle)
@@ -103,7 +122,6 @@ func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, 
 	c.Start()
 	<-ctx.Done()
 	log.InfoContext(ctx, "Forecast cron prediction stopped")
-
 }
 
 func buildForecastPrediction(conf *config.Config, log *slog.Logger) *forecast.Prediction {
