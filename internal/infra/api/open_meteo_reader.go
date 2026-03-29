@@ -69,6 +69,7 @@ func (o OpenMeteoReader) Read(ctx context.Context, slot *forecast.Slot) ([]*fore
 	if err := json.Unmarshal(body, &results); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
 	}
+	generatedAt := time.Now()
 	weather := make([]*forecast.Weather, len(results.Hourly.Time))
 	for i := range results.Hourly.Time {
 		time, err := time.Parse("2006-01-02T15:04", results.Hourly.Time[i])
@@ -82,6 +83,7 @@ func (o OpenMeteoReader) Read(ctx context.Context, slot *forecast.Slot) ([]*fore
 			results.Hourly.Precipitation[i],
 			results.Hourly.CloudCover[i],
 			results.Hourly.ShortwaveRadiation[i],
+			generatedAt,
 		)
 	}
 	return weather, nil

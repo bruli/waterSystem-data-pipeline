@@ -9,6 +9,11 @@ type Weather struct {
 	precipitationProbability float64
 	cloudCover               int
 	shortwaveRadiation       float64
+	generatedAt              time.Time
+}
+
+func (w Weather) GeneratedAt() time.Time {
+	return w.generatedAt
 }
 
 func (w Weather) Hour() time.Time {
@@ -42,6 +47,7 @@ func NewWeather(
 	precipitationProbability float64,
 	cloudCover int,
 	shortwaveRadiation float64,
+	generatedAt time.Time,
 ) *Weather {
 	return &Weather{
 		hour:                     hour,
@@ -50,5 +56,6 @@ func NewWeather(
 		precipitationProbability: precipitationProbability,
 		cloudCover:               cloudCover,
 		shortwaveRadiation:       shortwaveRadiation,
+		generatedAt:              generatedAt,
 	}
 }

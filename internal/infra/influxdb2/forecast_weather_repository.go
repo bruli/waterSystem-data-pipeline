@@ -3,6 +3,7 @@ package influxdb2
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/bruli/waterSystem-data-pipeline/internal/domain/forecast"
 	influxdb "github.com/influxdata/influxdb-client-go/v2"
@@ -21,7 +22,8 @@ func (f ForecastWeatherRepository) Save(ctx context.Context, weather *forecast.W
 	point := write.NewPoint(
 		"forecast",
 		map[string]string{
-			"location": "terrace",
+			"location":              "terrace",
+			"forecast_generated_at": weather.GeneratedAt().Format(time.RFC3339),
 		},
 		map[string]interface{}{
 			"temperature":               weather.Temperature(),
