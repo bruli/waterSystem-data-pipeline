@@ -3,6 +3,7 @@ package influxdb2
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/bruli/waterSystem-data-pipeline/internal/domain/executed_logs"
 	influxdb "github.com/influxdata/influxdb-client-go/v2"
@@ -26,7 +27,7 @@ func (e *ExecutedLogsRepository) Save(ctx context.Context, executedLog *executed
 	point := write.NewPoint(
 		"logs",
 		map[string]string{
-			"zone": executedLog.Zone(),
+			"zone": formatZoneName(executedLog.Zone()),
 		},
 		map[string]interface{}{
 			"seconds": executedLog.Seconds(),
@@ -41,6 +42,10 @@ func (e *ExecutedLogsRepository) Save(ctx context.Context, executedLog *executed
 	}
 	span.SetStatus(codes.Ok, "executed log saved")
 	return nil
+}
+
+func formatZoneName(zone string) string {
+	return strings.ReplaceAll(zone, " with fertilizer", "")
 }
 
 func (e *ExecutedLogsRepository) Close() {
