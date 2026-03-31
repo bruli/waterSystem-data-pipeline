@@ -27,7 +27,7 @@ func (h TerraceWeatherHandler) Handle(msg jetstream.Msg) error {
 		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
-	tw := terrace_weather.New(data.Temperature, data.IsRaining, data.ExecutedAt)
+	tw := terrace_weather.New(data.Temperature, data.Humidity, data.IsRaining, data.ExecutedAt)
 	if err := h.svc.Execute(ctx, tw); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())

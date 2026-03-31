@@ -6,6 +6,7 @@ type TerraceWeather struct {
 	Temperature float64   `json:"temperature"`
 	IsRaining   bool      `json:"is_raining"`
 	ExecutedAt  time.Time `json:"executed_at"`
+	Humidity    float64   `json:"humidity"`
 }
 
 type ExecutionLog struct {

@@ -31,6 +31,7 @@ func (t *TerraceWeatherRepository) Save(ctx context.Context, terraceWeather *ter
 		map[string]interface{}{
 			"temperature": terraceWeather.Temperature(),
 			"is_raining":  terraceWeather.IsRaining(),
+			"humidity":    terraceWeather.Humidity(),
 		},
 		terraceWeather.MeasuredAt(),
 	)
