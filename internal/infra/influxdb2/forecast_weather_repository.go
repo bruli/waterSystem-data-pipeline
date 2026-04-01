@@ -20,10 +20,9 @@ func (f ForecastWeatherRepository) Save(ctx context.Context, weather *forecast.W
 	writeAPI := f.client.WriteAPIBlocking(f.org, f.bucket)
 
 	point := write.NewPoint(
-		"forecast",
+		"forecast_v2",
 		map[string]string{
-			"location":              "terrace",
-			"forecast_generated_at": weather.GeneratedAt().Format(time.RFC3339),
+			"location": "terrace",
 		},
 		map[string]interface{}{
 			"temperature":               weather.Temperature(),
@@ -31,6 +30,7 @@ func (f ForecastWeatherRepository) Save(ctx context.Context, weather *forecast.W
 			"precipitation_probability": weather.PrecipitationProbability(),
 			"cloud_cover":               weather.CloudCover(),
 			"shortwave_radiation":       weather.ShortwaveRadiation(),
+			"forecast_generated_at":     weather.GeneratedAt().Format(time.RFC3339),
 		},
 		weather.Hour(),
 	)
