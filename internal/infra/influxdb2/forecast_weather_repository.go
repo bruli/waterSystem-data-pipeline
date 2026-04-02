@@ -26,9 +26,9 @@ func (f ForecastWeatherRepository) Save(ctx context.Context, weather *forecast.W
 		},
 		map[string]interface{}{
 			"temperature":               weather.Temperature(),
-			"relative_humidity":         weather.RelativeHumidity(),
+			"relative_humidity":         float64(weather.RelativeHumidity()),
 			"precipitation_probability": weather.PrecipitationProbability(),
-			"cloud_cover":               weather.CloudCover(),
+			"cloud_cover":               float64(weather.CloudCover()),
 			"shortwave_radiation":       weather.ShortwaveRadiation(),
 			"forecast_generated_at":     weather.GeneratedAt().Format(time.RFC3339),
 		},
