@@ -72,12 +72,12 @@ func (o OpenMeteoReader) Read(ctx context.Context, slot *forecast.Slot) ([]*fore
 	generatedAt := time.Now()
 	weather := make([]*forecast.Weather, len(results.Hourly.Time))
 	for i := range results.Hourly.Time {
-		time, err := time.Parse("2006-01-02T15:04", results.Hourly.Time[i])
+		parsedTime, err := time.Parse("2006-01-02T15:04", results.Hourly.Time[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse time: %w", err)
 		}
 		weather[i] = forecast.NewWeather(
-			time,
+			parsedTime,
 			results.Hourly.Temperature2m[i],
 			results.Hourly.RelativeHumidity2m[i],
 			results.Hourly.Precipitation[i],

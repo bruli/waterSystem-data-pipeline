@@ -3,7 +3,6 @@ package influxdb2
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/bruli/waterSystem-data-pipeline/internal/domain/forecast"
 	influxdb "github.com/influxdata/influxdb-client-go/v2"
@@ -30,7 +29,7 @@ func (f ForecastWeatherRepository) Save(ctx context.Context, weather *forecast.W
 			"precipitation_probability": weather.PrecipitationProbability(),
 			"cloud_cover":               float64(weather.CloudCover()),
 			"shortwave_radiation":       weather.ShortwaveRadiation(),
-			"forecast_generated_at":     weather.GeneratedAt().Format(time.RFC3339),
+			"forecast_generated_at":     weather.GeneratedAt().Unix(),
 		},
 		weather.Hour(),
 	)
