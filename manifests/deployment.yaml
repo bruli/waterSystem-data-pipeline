@@ -20,7 +20,7 @@ spec:
       imagePullSecrets:
         - name: ghcr-login
       containers:
-        - image: ghcr.io/bruli/watersystem-data-pipeline:0.8.2
+        - image: ghcr.io/bruli/watersystem-data-pipeline:0.8.3
           name: watersystem-data-pipeline
           imagePullPolicy: IfNotPresent
           ports:
