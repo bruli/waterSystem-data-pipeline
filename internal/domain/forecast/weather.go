@@ -40,6 +40,10 @@ func (w Weather) ShortwaveRadiation() float64 {
 	return w.shortwaveRadiation
 }
 
+func (w Weather) DryingFactor() float64 {
+	return (w.temperature / 40.0) * (1.0 - (float64(w.relativeHumidity) / 100)) * (w.shortwaveRadiation / 1000)
+}
+
 func NewWeather(
 	hour time.Time,
 	temperature float64,

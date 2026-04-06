@@ -30,6 +30,7 @@ func (f ForecastWeatherRepository) Save(ctx context.Context, weather *forecast.W
 			"cloud_cover":               float64(weather.CloudCover()),
 			"shortwave_radiation":       weather.ShortwaveRadiation(),
 			"forecast_generated_at":     weather.GeneratedAt().Unix(),
+			"drying_factor":             weather.DryingFactor(),
 		},
 		weather.Hour(),
 	)
