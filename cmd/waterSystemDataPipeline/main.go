@@ -100,7 +100,7 @@ func main() {
 	go nats.Consume(ctx, executionLogsConsumer, log, executionLogHandler.Handle)
 	go nats.Consume(ctx, terraceWeatherConsumer, log, terraceWeatherHandler.Handle)
 
-	srv := httpinfra.NewServer(conf.ServerHost)
+	srv := httpinfra.NewServer(conf.ServerHost, forecastPred, log)
 	defer func() {
 		log.InfoContext(ctx, "Closing server")
 		_ = srv.Shutdown(ctx)
