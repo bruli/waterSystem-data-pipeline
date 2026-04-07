@@ -66,8 +66,11 @@ func main() {
 		log.ErrorContext(ctx, "Error creating cron", "err", err)
 		os.Exit(1)
 	}
+	forecastCh := make(chan struct{})
+	defer close(forecastCh)
 
-	go forecastCron(ctx, cron, forecastPred, log)
+	go recurrentForecast(ctx, forecastCh, forecastPred, log)
+	go forecastCron(ctx, cron, forecastPred, log, forecastCh)
 
 	consumer, err := nats.NewConsumer(ctx, conf.NatsServerURL, nats.Subjects)
 	if err != nil {
@@ -106,11 +109,44 @@ func main() {
 	runHTTPServer(ctx, srv, log, serverListener)
 }
 
-func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, log *slog.Logger) {
+func recurrentForecast(ctx context.Context, ch <-chan struct{}, pred *forecast.Prediction, log *slog.Logger) {
+	for {
+		select {
+		case <-ctx.Done():
+			log.InfoContext(ctx, "Recurrent forecast stopped")
+			return
+
+		case <-ch:
+			log.InfoContext(ctx, "Recurrent forecast started...")
+			ticker := time.NewTicker(30 * time.Minute)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-ctx.Done():
+					log.InfoContext(ctx, "Recurrent forecast context done")
+					return
+
+				case <-ticker.C:
+					err := pred.Get(ctx, forecast.Tomorrow())
+					if err != nil {
+						log.ErrorContext(ctx, "Error getting forecast on recurrent process", "err", err)
+						continue
+					}
+
+					log.InfoContext(ctx, "Recurrent forecast prediction finished")
+				}
+			}
+		}
+	}
+}
+
+func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, log *slog.Logger, ch chan<- struct{}) {
 	defer c.Stop()
 	_, err := c.AddFunc("* 7 * * *", func() {
 		if err := pred.Get(ctx, forecast.Tomorrow()); err != nil {
 			log.ErrorContext(ctx, "Error getting forecast", "err", err)
+			ch <- struct{}{}
 		}
 		log.InfoContext(ctx, "Forecast prediction finished")
 	})
