@@ -20,7 +20,7 @@ spec:
       imagePullSecrets:
         - name: ghcr-login
       containers:
-        - image: ghcr.io/bruli/watersystem-data-pipeline:0.11.0
+        - image: ghcr.io/bruli/watersystem-data-pipeline:0.12.0
           name: watersystem-data-pipeline
           imagePullPolicy: IfNotPresent
           ports:
@@ -36,18 +36,18 @@ spec:
             - name: INFLUXDB_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: watersystem-data-pipeline-secret
-                  key: INFLUXDB_TOKEN
+                  name: influxdb-secret
+                  key: token
             - name: INFLUXDB_ORG
               valueFrom:
                 secretKeyRef:
-                  name: watersystem-data-pipeline-secret
-                  key: INFLUXDB_ORG
+                  name: influxdb-secret
+                  key: org
             - name: INFLUXDB_BUCKET
               valueFrom:
                 secretKeyRef:
-                  name: watersystem-data-pipeline-secret
-                  key: INFLUXDB_BUCKET
+                  name: influxdb-secret
+                  key: bucket
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
               value: http://otel-collector.observability.svc.cluster.local:4318
             - name: OTEL_TRACES_SAMPLER
