@@ -36,7 +36,7 @@ func NewConsumer(ctx context.Context, url string, subjects []string) (*Consumer,
 	if err != nil {
 		return nil, fmt.Errorf("jetstream.New: %w", err)
 	}
-	if err = ensureStream(ctx, js, subjects); err != nil {
+	if err := ensureStream(ctx, js, subjects); err != nil {
 		return nil, err
 	}
 	return &Consumer{js: js}, nil

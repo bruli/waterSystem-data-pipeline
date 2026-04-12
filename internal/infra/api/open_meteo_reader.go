@@ -47,7 +47,7 @@ func (o OpenMeteoReader) Read(ctx context.Context, slot *forecast.Slot) ([]*fore
 		slot.From().Format("2006-01-02"),
 		slot.To().Format("2006-01-02"),
 	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("http.NewRequestWithContext: %w", err)
 	}

@@ -12,35 +12,35 @@ type Weather struct {
 	generatedAt              time.Time
 }
 
-func (w Weather) GeneratedAt() time.Time {
+func (w *Weather) GeneratedAt() time.Time {
 	return w.generatedAt
 }
 
-func (w Weather) Hour() time.Time {
+func (w *Weather) Hour() time.Time {
 	return w.hour
 }
 
-func (w Weather) Temperature() float64 {
+func (w *Weather) Temperature() float64 {
 	return w.temperature
 }
 
-func (w Weather) RelativeHumidity() int {
+func (w *Weather) RelativeHumidity() int {
 	return w.relativeHumidity
 }
 
-func (w Weather) PrecipitationProbability() float64 {
+func (w *Weather) PrecipitationProbability() float64 {
 	return w.precipitationProbability
 }
 
-func (w Weather) CloudCover() int {
+func (w *Weather) CloudCover() int {
 	return w.cloudCover
 }
 
-func (w Weather) ShortwaveRadiation() float64 {
+func (w *Weather) ShortwaveRadiation() float64 {
 	return w.shortwaveRadiation
 }
 
-func (w Weather) DryingFactor() float64 {
+func (w *Weather) DryingFactor() float64 {
 	return (w.temperature / 40.0) * (1.0 - (float64(w.relativeHumidity) / 100)) * (w.shortwaveRadiation / 1000)
 }
 

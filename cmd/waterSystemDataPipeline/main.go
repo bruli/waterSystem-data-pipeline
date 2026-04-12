@@ -25,18 +25,24 @@ import (
 const serviceName = "waterSystem-data-pipeline"
 
 func main() {
+	if err := run(); err != nil {
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	ctx := context.Background()
 	log := buildLog()
 	conf, err := config.New()
 	if err != nil {
 		log.ErrorContext(ctx, "error loading config", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	tracingProv, err := tracing.InitTracing(ctx, serviceName)
 	if err != nil {
 		log.ErrorContext(ctx, "Error initializing tracing", "err", err)
-		os.Exit(1)
+		return err
 	}
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -53,7 +59,7 @@ func main() {
 	log.InfoContext(ctx, "Starting server", "host", conf.ServerHost)
 	if err != nil {
 		log.ErrorContext(ctx, "Error starting server", "err", err)
-		os.Exit(1)
+		return err
 	}
 	defer func() {
 		_ = serverListener.Close()
@@ -61,26 +67,33 @@ func main() {
 
 	forecastPred := buildForecastPrediction(conf, log)
 
-	cron, err := buildCron()
+	cronJob, err := buildCron()
 	if err != nil {
 		log.ErrorContext(ctx, "Error creating cron", "err", err)
-		os.Exit(1)
+		return err
 	}
 	forecastCh := make(chan struct{})
 	defer close(forecastCh)
 
+	errCh := make(chan error)
+	defer close(errCh)
+
 	go recurrentForecast(ctx, forecastCh, forecastPred, log)
-	go forecastCron(ctx, cron, forecastPred, log, forecastCh)
+	go func() {
+		if err := forecastCron(ctx, cronJob, forecastPred, log, forecastCh); err != nil {
+			errCh <- err
+		}
+	}()
 
 	consumer, err := nats.NewConsumer(ctx, conf.NatsServerURL, nats.Subjects)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error starting consumer", "err", err.Error())
-		os.Exit(1)
+		return err
 	}
 	executionLogsConsumer, err := consumer.Create(ctx, nats.ExecutionLogsSubject)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error starting execution logs consumer", "err", err.Error())
-		os.Exit(1)
+		return err
 	}
 	execLogRepo := influxdb2.NewExecutedLogsRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket, tracer)
 	defer execLogRepo.Close()
@@ -90,7 +103,7 @@ func main() {
 	terraceWeatherConsumer, err := consumer.Create(ctx, nats.TerraceWeatherSubject)
 	if err != nil {
 		slog.ErrorContext(ctx, "Error starting terrace weather consumer", "err", err.Error())
-		os.Exit(1)
+		return err
 	}
 	twRepo := influxdb2.NewTerraceWeatherRepository(conf.InfluxDBURL, conf.InfluxDBToken, conf.InfluxDBOrg, conf.InfluxDBBucket, tracer)
 	defer twRepo.Close()
@@ -106,7 +119,16 @@ func main() {
 		_ = srv.Shutdown(ctx)
 	}()
 
-	runHTTPServer(ctx, srv, log, serverListener)
+	go func() {
+		if err := runHTTPServer(ctx, srv, log, serverListener); err != nil {
+			errCh <- err
+		}
+	}()
+
+	if err := <-errCh; err != nil {
+		return err
+	}
+	return nil
 }
 
 func recurrentForecast(ctx context.Context, ch <-chan struct{}, pred *forecast.Prediction, log *slog.Logger) {
@@ -119,12 +141,12 @@ func recurrentForecast(ctx context.Context, ch <-chan struct{}, pred *forecast.P
 		case <-ch:
 			log.InfoContext(ctx, "Recurrent forecast started...")
 			ticker := time.NewTicker(30 * time.Minute)
-			defer ticker.Stop()
 
 			for {
 				select {
 				case <-ctx.Done():
 					log.InfoContext(ctx, "Recurrent forecast context done")
+					ticker.Stop()
 					return
 
 				case <-ticker.C:
@@ -141,7 +163,7 @@ func recurrentForecast(ctx context.Context, ch <-chan struct{}, pred *forecast.P
 	}
 }
 
-func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, log *slog.Logger, ch chan<- struct{}) {
+func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, log *slog.Logger, ch chan<- struct{}) error {
 	defer c.Stop()
 	_, err := c.AddFunc("* 7 * * *", func() {
 		if err := pred.Get(ctx, forecast.Tomorrow()); err != nil {
@@ -152,12 +174,13 @@ func forecastCron(ctx context.Context, c *cron.Cron, pred *forecast.Prediction, 
 	})
 	if err != nil {
 		log.ErrorContext(ctx, "Error adding cron job", "err", err)
-		os.Exit(1)
+		return err
 	}
 	log.InfoContext(ctx, "Forecast cron prediction started")
 	c.Start()
 	<-ctx.Done()
 	log.InfoContext(ctx, "Forecast cron prediction stopped")
+	return nil
 }
 
 func buildForecastPrediction(conf *config.Config, log *slog.Logger) *forecast.Prediction {
@@ -176,13 +199,14 @@ func buildLog() *slog.Logger {
 	return log
 }
 
-func runHTTPServer(ctx context.Context, srv *http.Server, log *slog.Logger, serverListener net.Listener) {
+func runHTTPServer(ctx context.Context, srv *http.Server, log *slog.Logger, serverListener net.Listener) error {
 	go shutdown(ctx, srv, log)
 
 	if err := srv.Serve(serverListener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.ErrorContext(ctx, "Error starting server", "err", err)
-		os.Exit(1)
+		return err
 	}
+	return nil
 }
 
 func shutdown(ctx context.Context, srv *http.Server, log *slog.Logger) {
