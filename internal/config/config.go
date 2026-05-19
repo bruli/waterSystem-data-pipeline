@@ -9,6 +9,7 @@ type Config struct {
 	InfluxDBToken  string `env:"INFLUXDB_TOKEN,required"`
 	InfluxDBOrg    string `env:"INFLUXDB_ORG,required"`
 	InfluxDBBucket string `env:"INFLUXDB_BUCKET,required"`
+	LogLevel       string `env:"LOG_LEVEL,required"`
 }
 
 func New() (*Config, error) {

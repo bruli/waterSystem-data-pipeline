@@ -20,7 +20,7 @@ spec:
       imagePullSecrets:
         - name: ghcr-login
       containers:
-        - image: ghcr.io/bruli/watersystem-data-pipeline:0.12.0
+        - image: ghcr.io/bruli/watersystem-data-pipeline:0.12.1
           name: watersystem-data-pipeline
           imagePullPolicy: IfNotPresent
           ports:
@@ -54,6 +54,8 @@ spec:
               value: always_on
             - name: OTEL_EXPORTER_OTLP_PROTOCOL
               value: grpc
+            - name: LOG_LEVEL
+              value: error
           readinessProbe:
             httpGet:
               path: /healthz

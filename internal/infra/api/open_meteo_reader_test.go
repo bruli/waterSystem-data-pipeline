@@ -1,3 +1,5 @@
+//go:build infra
+
 package api_test
 
 import (

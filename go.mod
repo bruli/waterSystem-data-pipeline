@@ -1,6 +1,6 @@
 module github.com/bruli/waterSystem-data-pipeline
 
-go 1.26.2
+go 1.26.3
 
 require (
 	github.com/bruli/raspberryWaterSystem v0.0.0-20260331190533-449353b283fc

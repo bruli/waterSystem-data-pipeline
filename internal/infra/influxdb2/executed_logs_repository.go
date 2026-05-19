@@ -29,7 +29,7 @@ func (e *ExecutedLogsRepository) Save(ctx context.Context, executedLog *executed
 		map[string]string{
 			"zone": formatZoneName(executedLog.Zone()),
 		},
-		map[string]interface{}{
+		map[string]any{
 			"seconds": executedLog.Seconds(),
 		},
 		executedLog.ExecutedAt(),

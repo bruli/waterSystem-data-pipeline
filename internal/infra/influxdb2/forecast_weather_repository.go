@@ -23,7 +23,7 @@ func (f ForecastWeatherRepository) Save(ctx context.Context, weather *forecast.W
 		map[string]string{
 			"location": "terrace",
 		},
-		map[string]interface{}{
+		map[string]any{
 			"temperature":               weather.Temperature(),
 			"relative_humidity":         float64(weather.RelativeHumidity()),
 			"precipitation_probability": weather.PrecipitationProbability(),
