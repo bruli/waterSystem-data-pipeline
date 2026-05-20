@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -47,35 +48,67 @@ func (o OpenMeteoReader) Read(ctx context.Context, slot *forecast.Slot) ([]*fore
 		slot.From().Format("2006-01-02"),
 		slot.To().Format("2006-01-02"),
 	)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return nil, fmt.Errorf("http.NewRequestWithContext: %w", err)
 	}
+
 	resp, err := o.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("http.DefaultClient.Do: %w", err)
+		switch {
+		case errors.Is(err, context.DeadlineExceeded):
+			return nil, fmt.Errorf("open-meteo request timeout: %w", err)
+		case errors.Is(err, context.Canceled):
+			return nil, fmt.Errorf("open-meteo request canceled: %w", err)
+		default:
+			return nil, fmt.Errorf("open-meteo request failed: %w", err)
+		}
 	}
 	defer func() {
 		_ = resp.Body.Close()
 	}()
+
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, fmt.Errorf("unexpected status code %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %w", err)
-	}
+
 	var results OpenMeteoResponse
-	if err := json.Unmarshal(body, &results); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal response body: %w", err)
+	if err := json.NewDecoder(resp.Body).Decode(&results); err != nil {
+		return nil, fmt.Errorf("failed to decode response body: %w", err)
 	}
+
+	n := len(results.Hourly.Time)
+	if n == 0 {
+		return []*forecast.Weather{}, nil
+	}
+
+	if len(results.Hourly.Temperature2m) != n ||
+		len(results.Hourly.RelativeHumidity2m) != n ||
+		len(results.Hourly.Precipitation) != n ||
+		len(results.Hourly.CloudCover) != n ||
+		len(results.Hourly.ShortwaveRadiation) != n {
+		return nil, fmt.Errorf(
+			"inconsistent hourly arrays length: time=%d temp=%d humidity=%d precipitation=%d cloudcover=%d radiation=%d",
+			n,
+			len(results.Hourly.Temperature2m),
+			len(results.Hourly.RelativeHumidity2m),
+			len(results.Hourly.Precipitation),
+			len(results.Hourly.CloudCover),
+			len(results.Hourly.ShortwaveRadiation),
+		)
+	}
+
 	generatedAt := time.Now()
-	weather := make([]*forecast.Weather, len(results.Hourly.Time))
-	for i := range results.Hourly.Time {
+	weather := make([]*forecast.Weather, n)
+
+	for i := 0; i < n; i++ {
 		parsedTime, err := time.Parse("2006-01-02T15:04", results.Hourly.Time[i])
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse time: %w", err)
+			return nil, fmt.Errorf("failed to parse time at index %d (%q): %w", i, results.Hourly.Time[i], err)
 		}
+
 		weather[i] = forecast.NewWeather(
 			parsedTime,
 			results.Hourly.Temperature2m[i],
@@ -86,6 +119,7 @@ func (o OpenMeteoReader) Read(ctx context.Context, slot *forecast.Slot) ([]*fore
 			generatedAt,
 		)
 	}
+
 	return weather, nil
 }
 
