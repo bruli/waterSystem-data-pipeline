@@ -6,6 +6,7 @@ resources:
   - namespace.yaml
   - deployment.yaml
   - secret-ghcr.yaml
+  - externalsecret-influxdb.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: watersystem-data-pipeline
